@@ -11,7 +11,9 @@ interface HomeProps {
   userCount: number
 
 }
+import { GetStaticProps, GetStaticPropsContext } from "next";
 import Image from "next/image";
+import { FormEvent, useState } from "react";
 import appPreviewImg from '../assets/app-nlw-copa-preview.png';
 import iconChecking from '../assets/icon-check.svg';
 import logoImg from '../assets/logo.svg';
@@ -20,6 +22,29 @@ import { api } from "../lib/axios";
 
 
 export default function Home(props: HomeProps) {
+
+  const [poolTitle, setPoolTitle] = useState('')
+
+  async function createPool(event: FormEvent) {
+    event.preventDefault()
+
+    try {
+      const response = await api.post('/pools', {
+        title: poolTitle
+      })
+
+      const { code } = response.data
+
+      await navigator.clipboard.writeText(code)
+      alert('O código do bolão criado já está em sua área de transferência!')
+
+      setPoolTitle('')
+    } catch (err) {
+      console.log(err)
+      alert('Falha na criação do bolão, tente novamente!')
+    }
+  }
+
   return (
 
     <div className="max-w-[1124px] h-screen mx-auto grid grid-cols-2 gap-28 items-center">
@@ -36,11 +61,14 @@ export default function Home(props: HomeProps) {
           </strong>
         </div>
 
-        <form className="mt-10 flex gap-2">
+        <form onSubmit={createPool} className="mt-10 flex gap-2">
           <input
-            className="flex-1 px-6 py-4 rounded bg-gray-800 border-gray-600 text-sm"
+            className="flex-1 px-6 py-4 rounded bg-gray-800 border-gray-600 text-sm text-gray-100"
             type="text"
-            required placeholder="Qual o nome de seu bolão?" />
+            required placeholder="Qual o nome de seu bolão?"
+            onChange={event => setPoolTitle(event.target.value)}
+            value={poolTitle}
+          />
           <button
             className="bg-btYellow-500 px-6 py-4 
             rounded text-gray-900 hover:bg-btYellow-700 font-bold text-sm uppercase"
@@ -85,7 +113,7 @@ export default function Home(props: HomeProps) {
 }
 
 
-export const getServerSideProps = async () => {
+export const getStaticProps: GetStaticProps = async (ctx: GetStaticPropsContext) => {
 
   const [poolContResponse, guessContResponse, userContResponse] = await Promise.all([
     api.get('pools/count'),
@@ -101,6 +129,7 @@ export const getServerSideProps = async () => {
       poolCount: poolContResponse.data.count,
       guessCount: guessContResponse.data.count,
       userCount: userContResponse.data.count
-    }
+    },
+    revalidate: 5
   }
 }
